@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <title>{% block title %}{% endblock %}</title>
+</head>
+<body>
+    <header>
+        <div class="d-flex flex-column flex-md-row align-items-center pb-3 mb-4 border-bottom">
+      <a href="/" class="d-flex align-items-center link-body-emphasis text-decoration-none">
+        <img src="{{ url_for('static', filename='logo.ico') }}" width="80" height="80" alt="Catii Farm Logo">
+          <span class="fs-4">Catii Farm</span>
+      </a>
+
+      <nav class="d-inline-flex mt-2 mt-md-0 ms-md-auto">
+        <a class="me-3 py-2 link-body-emphasis text-decoration-none" href="dashboard">Dashboard</a>
+        <a class="me-3 py-2 link-body-emphasis text-decoration-none" href="accounts">Accounts</a>
+        <a class="me-3 py-2 link-body-emphasis text-decoration-none" href="settings">Settings</a>
+      </nav>
+    </div>
+    </header>
+    {% block body %}{% endblock %}
+</body>
+</html>

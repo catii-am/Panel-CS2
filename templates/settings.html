@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <style>
+        body {
+        background-color: #101b23;
+        }
+
+        button:hover {
+            background-color: #187ed0; /* Цвет фона при наведении */
+        }
+
+        .custom-button {
+            width: 30px; /* Ширина кнопки */
+            height: 30px; /* Высота кнопки */
+            padding: 0;
+            background-color: #223849; /* Заливка фона */
+            border: none;
+            border-radius: 10px; /* Радиус скругления углов */
+            cursor: pointer;
+            display: flex; /* Располагаем содержимое кнопки вдоль главной оси */
+            align-items: center; /* Выравниваем содержимое кнопки по центру по вертикали */
+            justify-content: center;
+        }
+
+        .custom-button img {
+            width: 65%; /* Ширина изображения занимает всю доступную ширину кнопки */
+        }
+
+        .notification-container {
+            display: none; /* Скрываем контейнер с уведомлениями по умолчанию */
+            position: absolute; /* Абсолютное позиционирование */
+            top: 90px; /* Отступ сверху (высота кнопки) */
+            right: 70px; /* Выравнивание по правому краю */
+            background-color: #223849; /* Цвет фона */
+            border: 1px solid #344c61; /* Граница */
+            border-radius: 8px; /* Скругление углов */
+            padding: 10px; /* Внутренние отступы */
+            box-shadow: 10px 20px 50px rgba(0, 0, 0, 3); /* Тень */
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px; /* Максимальная ширина контейнера */
+            margin: 0 auto; /* Центрирование контейнера по горизонтали */
+            padding: 20px;
+        }
+
+        .Settings {
+            font-family: Inter;
+            color: white;
+            font-weight: bold;
+        }
+
+        .Input-text {
+            font-family: Inter;
+            color: white;
+            margin-top: 30px;
+        }
+
+        .custom-input {
+            margin-top: 8px;
+            width: 100%; /* Ширина input занимает всю доступную ширину контейнера */
+            padding: 10px; /* Внутренний отступ input */
+            border: 2px solid #385269; /* Обводка input */
+            border-radius: 15px; /* Скругление углов input */
+            font-size: 16px; /* Размер шрифта */
+            color: #95afc6; /* Цвет текста */
+            background-color: #172734;
+        }
+
+        .custom-input:focus {
+            outline: none; /* Убираем стандартное подчеркивание при фокусе */
+            border-color: #385269; /* Изменяем цвет обводки при фокусе */
+        }
+
+        .main-button {
+            font-family: Tahoma;
+            font-weight: bold;
+            background-color: #1c93f3; /* Цвет фона */
+            color: white; /* Цвет текста */
+            padding: 10px 20px; /* Отступы внутри кнопки */
+            border: none; /* Убираем границу */
+            border-radius: 7px; /* Радиус границы */
+            cursor: pointer; /* Замена курсора при наведении */
+            margin-top: 20px;
+            width: 100%;
+        }
+
+    </style>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const notificationButton = document.getElementById('notification-button');
+    const notificationContainer = document.getElementById('notification-container');
+
+    // Переключение видимости окна с уведомлениями при клике на кнопку уведомлений
+    notificationButton.addEventListener('click', function() {
+        toggleNotificationContainer();
+    });
+
+    // Функция переключения видимости окна с уведомлениями
+    function toggleNotificationContainer() {
+        if (notificationContainer.style.display === 'block') {
+            hideNotificationContainer();
+        } else {
+            showNotificationContainer();
+        }
+    }
+
+    // Функция плавного показа окна с уведомлениями
+    function showNotificationContainer() {
+        notificationContainer.style.display = 'block';
+        notificationContainer.style.opacity = '0';
+        let opacity = 0;
+        const animationInterval = setInterval(function() {
+            opacity += 0.1;
+            notificationContainer.style.opacity = opacity;
+            if (opacity >= 1) {
+                clearInterval(animationInterval);
+            }
+        }, 25);
+    }
+
+    // Функция плавного скрытия окна с уведомлениями
+    function hideNotificationContainer() {
+        notificationContainer.style.opacity = '1';
+        let opacity = 1;
+        const animationInterval = setInterval(function() {
+            opacity -= 0.1;
+            notificationContainer.style.opacity = opacity;
+            if (opacity <= 0) {
+                clearInterval(animationInterval);
+                notificationContainer.style.display = 'none';
+            }
+        }, 25);
+    }
+});
+
+                function saveSettings() {
+            var steamPath = document.getElementById('SteamPath-input').value;
+            var launchParameters = document.getElementById('LaunchParameters').value;
+
+            // Создаем объект FormData и добавляем значения инпутов
+            var formData = new FormData();
+            formData.append('steam_path', steamPath);
+            formData.append('launch_parameters', launchParameters);
+
+            // Отправляем POST-запрос на сервер
+            fetch('/save_settings', {
+                method: 'POST',
+                body: formData
+            })
+        }
+
+    </script>
+    <title>Catii Farm</title>
+</head>
+<body>
+    <header>
+        <div class="d-flex flex-column flex-md-row align-items-center pb-3 mb-4 border-bottom">
+      <a href="/" class="d-flex align-items-center link-body-emphasis text-decoration-none">
+        <img src="{{ url_for('static', filename='logo.ico') }}" width="75" height="75" alt="Catii Farm Logo">
+          <span class="fs-4">
+              <font size="7" color="white" face="Black Ops One">Catii Farm</font>
+          </span>
+      </a>
+
+      <nav class="d-inline-flex mt-2 mt-md-0 ms-md-auto">
+        <a class="me-3 py-2 link-body-emphasis text-decoration-none" href="dashboard">
+              <button class="custom-button">
+              <img src="static/dashboard.png" alt="info">
+              </button>
+        </a>
+        <a class="me-3 py-2 link-body-emphasis text-decoration-none" href="accounts">
+              <button class="custom-button">
+              <img src="static/accounts.png" alt="info">
+              </button>
+        </a>
+          <a class="me-3 py-2 link-body-emphasis text-decoration-none" href="settings">
+              <button class="custom-button">
+              <img src="static/settings.png" alt="settings">
+              </button>
+          </a>
+          <a class="me-3 py-2 link-body-emphasis text-decoration-none" href="info">
+              <button class="custom-button">
+              <img src="static/info.png" alt="info">
+              </button>
+          </a>
+          <a class="me-3 py-2 link-body-emphasis text-decoration-none" id="notification-button">
+              <button class="custom-button">
+              <img src="static/notification.png" alt="notification">
+              </button>
+              <div id="notification-container" class="notification-container">
+                  <!-- Содержимое окна с уведомлениями -->
+              </div>
+          </a>
+
+          <a class="me-3 py-2 link-body-emphasis text-decoration-none" href="account">
+              <button class="custom-button">
+              <img src="static/account.png" alt="account">
+              </button>
+          </a>
+      </nav>
+    </div>
+    </header>
+    <div class="container">
+        <div class="Settings">
+            <h1>Settings</h1>
+        </div>
+        <div class="Input-text">
+            Steam Path
+        </div>
+        <input type="text" id="SteamPath-input" class="custom-input" value="C:/Steam/Steam.exe">
+        <div class="Input-text" style="margin-top: 20px;">
+            Launch Parameters
+        </div>
+        <input type="text" id="LaunchParameters" class="custom-input" value="-console -novid">
+        <button class="main-button" onclick="saveSettings()">Save</button>
+    </div>
+</body>
+</html>
