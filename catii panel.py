@@ -1,10 +1,10 @@
-import play_game
-import steam_login
-import server
+from logic import play_game
+from logic import steam_login
+from gsi import server
 import pyperclip
-import tile_windows
-import make_lobby
-import accept_game
+from logic import tile_windows
+from logic import make_lobby
+from logic import accept_game
 
 config = ('bind c "yaw +3409 1 1";bind z +duck;sensitivity 1.2;bind v +attack2;bind f "toggle fps_max 10 30";bind q '
           'disconnect;bind g "fps_max 60";fps_max 60')
