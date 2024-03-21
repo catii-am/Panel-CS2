@@ -10,13 +10,13 @@ config = ('bind c "yaw +3409 1 1";bind z +duck;sensitivity 1.2;bind v +attack2;b
           'disconnect;bind g "fps_max 60";fps_max 60')
 
 if __name__ == "__main__":
-    # tile, invite = steam_login.steam_login()
-    # if tile:
-    #     tile_windows.move_window()
-    # if invite:
-    #     make_lobby.make_lobby()
-    # print('В буфер обмена был скопирован конфиг, вставь его в консоль и начинай поиск игры')
-    # pyperclip.copy(config)
-    # while True:
-    #     accept_game.accept_game()
+    tile, invite = steam_login.steam_login()
+    if tile:
+        tile_windows.move_window()
+    if invite:
+        make_lobby.make_lobby()
+    print('В буфер обмена был скопирован конфиг, вставь его в консоль и начинай поиск игры')
+    pyperclip.copy(config)
+    while True:
+        accept_game.accept_game()
         play_game.play_game(server)
