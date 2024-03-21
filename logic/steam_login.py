@@ -139,9 +139,7 @@ class Steam:
         send_keys(SGC)
 
 
-def steam_login():
-    tile = False
-    invite = False
+def steam_login(acc_quest):
     config_file = "config.cfg"
     steam_path = None
     arguments = []
@@ -159,19 +157,10 @@ def steam_login():
                     arguments = value.strip().split()
 
     steam = Steam()
-    clear = lambda: os.system('cls')
-
-    print('Проверяем наличие новых аккаунтов...')
-
-    all_accounts, new_account = process_files_in_directory('MaFile')
-    print(f'Всего {all_accounts} аккаунтов, из них новых {new_account}\n')
 
     acc_list = make_list_from_file("accounts.txt")
-    acc_quest = int(input('Какую пачку аккаунтов запустить? (1-9999)\nИли 0 если окна уже запущены.\n'))
     first_number = 1
     second_number = 11
-
-    clear()
 
     if acc_quest > 1:
         acc_quest = acc_quest - 1
@@ -206,17 +195,3 @@ def steam_login():
                     break
                 else:
                     time.sleep(1)
-        clear()
-        if input('Нужно ли раставить окна\n') == 'y':
-            tile = True
-        if input('Нужно ли пригласить акки в лобби?\n') == 'y':
-            invite = True
-        input('После запуска всех окон кс нажми Enter')
-        clear()
-        return tile, invite
-    else:
-        if input('Нужно ли раставить окна\n') == 'y':
-            tile = True
-        if input('Нужно ли пригласить акки в лобби?\n') == 'y':
-            invite = True
-        return tile, invite
