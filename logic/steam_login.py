@@ -140,7 +140,7 @@ class Steam:
 
 
 def steam_login(acc_quest):
-    config_file = "config.cfg"
+    config_file = "_internal/static/sys/config.cfg"
     steam_path = None
     arguments = []
 
@@ -158,7 +158,7 @@ def steam_login(acc_quest):
 
     steam = Steam()
 
-    acc_list = make_list_from_file("accounts.txt")
+    acc_list = make_list_from_file("_internal/static/sys/accounts.txt")
     first_number = 1
     second_number = 11
 

@@ -93,7 +93,7 @@ class PlayerStatisticsTracker:
         ct_score = server.get_info("map", "team_ct", "score")
         t_score = server.get_info("map", "team_t", "score")
         round_phase = server.get_info("round", "phase")
-        with open('static/sys/game_state.txt', 'w') as file:
+        with open('_internal/static/sys/game_state.txt', 'w') as file:
             file.write(f'Terrorist {t_score}:{ct_score} Counter-Terrorist\nround phase: {round_phase}')
             file.close()
 

@@ -1,3 +1,4 @@
+import time
 from tkinter import *
 import tkinter as tk
 from tkinter import ttk
@@ -36,13 +37,6 @@ class Application(tk.Tk):
         self.header_frame = tk.Frame(self)
         self.header_frame.pack(side="top", fill="x")
 
-        # Добавление логотипа
-        image = Image.open("logo.png")
-        image.thumbnail((64, 64))  # Масштабируем изображение до 32x32
-        photo = ImageTk.PhotoImage(image)
-        self.logo = ttk.Button(image=photo, compound="left", command=self.show_accounts)
-        self.logo.image = photo
-
         # Название приложения
         self.app_name_label = tk.Label(self.header_frame, text="Catti Farm", font=("Arial", 16))
         self.app_name_label.grid(row=0, column=1, padx=10, pady=10)
@@ -53,12 +47,12 @@ class Application(tk.Tk):
 
         # Создание кнопок навигации
         nav_buttons = [
-            ("DashBoard", "static/icon/dashboard.png", self.show_dashboard),
-            ("Accounts", "static/icon/accounts.png", self.show_accounts),
-            ("Settings", "static/icon/settings.png", self.show_settings),
-            ("Info", "static/icon/info.png", self.show_info),
-            ("Notification", "static/icon/notification.png", self.show_notifications),
-            ("Profile", "static/icon/account.png", self.show_profile)
+            ("DashBoard", "_internal/static/icon/dashboard.png", self.show_dashboard),
+            ("Accounts", "_internal/static/icon/accounts.png", self.show_accounts),
+            ("Settings", "_internal/static/icon/settings.png", self.show_settings),
+            ("Info", "_internal/static/icon/info.png", self.show_info),
+            ("Notification", "_internal/static/icon/notification.png", self.show_notifications),
+            ("Profile", "_internal/static/icon/account.png", self.show_profile)
         ]
 
         for index, (text, icon, command) in enumerate(nav_buttons):
@@ -191,7 +185,8 @@ class AccountsWindow(tk.Toplevel):
         thread.start()
 
     def accept_game(self):
-        accept_game.accept_game()
+        thread = threading.Thread(target=accept_game.accept_game)
+        thread.start()
 
     def on_checkbox_click(self, index):
         self.selected_index = index  # Сохраняем выбранный индекс
@@ -199,17 +194,19 @@ class AccountsWindow(tk.Toplevel):
     def launch_steam(self):
         if self.selected_index is not None:
             checkbox_index = (self.selected_index // 10) + 1
-            steam_login.steam_login(checkbox_index)
+            thread = threading.Thread(target=steam_login.steam_login, args=(checkbox_index,))
+            thread.start()
 
     def arrange_windows(self):
-        tile_windows.move_window()
+        thread = threading.Thread(target=tile_windows.move_window)
+        thread.start()
 
     def make_lobby(self):
-        make_lobby.make_lobby()
-
+        thread = threading.Thread(target=make_lobby.make_lobby)
+        thread.start()
     def load_accounts(self):
         # Загрузка аккаунтов из файла accounts.txt
-        accounts = make_list_from_file("accounts.txt")
+        accounts = make_list_from_file("_internal/static/sys/accounts.txt")
 
         # Создаем чекбоксы для выбора каждых 10 аккаунтов
         for i in range(0, len(accounts), 10):
@@ -240,7 +237,7 @@ class SettingsWindow(tk.Toplevel):
     def __init__(self, parent):
         super().__init__(parent)
 
-        config_file = "config.cfg"
+        config_file = "_internal/static/sys/config.cfg"
         with open(config_file, "r") as f:
             for line in f:
                 # Разделение строки по первому символу ":"
@@ -342,7 +339,7 @@ class DashboardWindow(tk.Toplevel):
         self.update_data()
 
     def update_data(self):
-        game_info = make_list_from_file('static/sys/game_state.txt')
+        game_info = make_list_from_file('_internal/static/sys/game_state.txt')
         match_score = game_info[0]
         current_state = game_info[1]
 
@@ -356,5 +353,9 @@ class DashboardWindow(tk.Toplevel):
         self.after(1000, self.update_data)
 
 if __name__ == "__main__":
-    app = Application()
-    app.mainloop()
+    try:
+        app = Application()
+        app.mainloop()
+    except Exception as e:
+        print(e)
+        time.sleep(30)
