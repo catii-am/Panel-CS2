@@ -1,4 +1,4 @@
-import information
+from gsi import information
 
 class GameState:
     def __init__(self):

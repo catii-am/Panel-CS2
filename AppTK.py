@@ -2,7 +2,10 @@ from tkinter import *
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
+from tkinter import messagebox
 from logic import steam_login, tile_windows, play_game, make_lobby, accept_game
+from gsi import server
+import threading
 
 
 def make_list_from_file(file):
@@ -68,9 +71,6 @@ class Application(tk.Tk):
             button.image = photo  # Сохраняем ссылку на изображение, чтобы избежать сборки мусора
             button.grid(row=0, column=index, padx=5, pady=5)
 
-        # По умолчанию отображаем DashBoard
-        # self.show_accounts()
-
         # Обработчики событий для перемещения окна
         self.start_x = 0
         self.start_y = 0
@@ -87,8 +87,8 @@ class Application(tk.Tk):
         self.geometry('+{x}+{y}'.format(x=x, y=y))
 
     def show_dashboard(self):
-        # Здесь будет код для отображения экрана DashBoard
-        print("DashBoard screen")
+        dashboard_window = DashboardWindow(self)
+        dashboard_window.grab_set()
 
     def show_accounts(self):
         accounts_window = AccountsWindow(self)
@@ -131,8 +131,6 @@ class AccountsWindow(tk.Toplevel):
 
         self.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
-        # self.overrideredirect(True)
-
         # Надпись "Accounts"
         accounts_label = tk.Label(self, text="Accounts", font=("Arial", 16))
         accounts_label.pack(side="top", pady=10)
@@ -167,7 +165,7 @@ class AccountsWindow(tk.Toplevel):
         button_block = tk.Frame(self)
         button_block.pack(side="bottom", pady=10)
 
-        start_game_button = ttk.Button(button_block, text="Start game", command=self.start_game)
+        start_game_button = ttk.Button(button_block, text="Play game", command=self.start_game)
         start_game_button.grid(row=0, column=0, padx=5)
 
         accept_game_button = ttk.Button(button_block, text="Accept game", command=self.accept_game)
@@ -188,7 +186,9 @@ class AccountsWindow(tk.Toplevel):
         return index
 
     def start_game(self):
-        print("start game")
+        answer = messagebox.askyesno("Confirmation", "КТ сверху?")
+        thread = threading.Thread(target=play_game.play_game, args=(server, answer,))
+        thread.start()
 
     def accept_game(self):
         accept_game.accept_game()
@@ -307,6 +307,53 @@ class SettingsWindow(tk.Toplevel):
             file.write(f'SteamPath:{steam_path}\nArguments:{launch_parameters}')
         # Ваш код для сохранения настроек
 
+
+class DashboardWindow(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.title("Dashboard")
+        self.geometry("600x300")
+
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        window_width = 600
+        window_height = 300
+
+        x = (screen_width - window_width) // 2
+        y = screen_height - window_height - 48 - 104
+
+        self.geometry(f"{window_width}x{window_height}+{x}+{y}")
+
+        # Текст "Game Score"
+        self.game_score_label = tk.Label(self, text="Game Score", font=("Arial", 16))
+        self.game_score_label.pack(pady=10)
+
+        # Счет матча из файла game_state.txt
+        self.match_score_label = tk.Label(self, text="", font=("Arial", 14))
+        self.match_score_label.pack()
+
+        # Текущее состояние матча из файла game_state.txt
+        self.current_state_label = tk.Label(self, text="")
+        self.current_state_label.pack()
+
+        # Периодическое обновление данных
+        self.update_data()
+
+    def update_data(self):
+        game_info = make_list_from_file('static/sys/game_state.txt')
+        match_score = game_info[0]
+        current_state = game_info[1]
+
+        # Обновляем счет матча из файла game_state.txt
+        self.match_score_label.config(text=match_score)
+
+        # Обновляем текущее состояние матча из файла game_state.txt
+        self.current_state_label.config(text=current_state)
+
+        # Повторно вызываем этот метод через 1000 миллисекунд (1 секунда)
+        self.after(1000, self.update_data)
 
 if __name__ == "__main__":
     app = Application()

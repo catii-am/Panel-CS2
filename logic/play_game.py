@@ -88,6 +88,14 @@ class PlayerStatisticsTracker:
         except Exception as e:
             print(f"Произошла ошибка при получении счета: {e}")
             return None
+    @staticmethod
+    def get_game_info(server):
+        ct_score = server.get_info("map", "team_ct", "score")
+        t_score = server.get_info("map", "team_t", "score")
+        round_phase = server.get_info("round", "phase")
+        with open('static/sys/game_state.txt', 'w') as file:
+            file.write(f'Terrorist {t_score}:{ct_score} Counter-Terrorist\nround phase: {round_phase}')
+            file.close()
 
 
 class WindowController:
@@ -270,10 +278,8 @@ class GameLogic:
         return x, y, window_id
 
 
-def play_game(server):
+def play_game(server, answer):
     play_time = time.time()
-    ct_complete = False
-    t_complete = False
     tracker = PlayerStatisticsTracker()
     window_coords = WindowCoordinates()
     game_logic = GameLogic()
@@ -293,9 +299,9 @@ def play_game(server):
 
     """Выбор положения кт. (в будущем пофиксить)"""
 
-    quest = input("КТ сверху? (y/n)")
-    if quest == "y":
+    if answer:
         ct = True
+        print('кт сверху')
     else:
         ct = False
 
@@ -306,12 +312,9 @@ def play_game(server):
 
     print('Ждем начала матча...')
     while server.get_info("round", "phase") != "live":
+        tracker.get_game_info(server)
         time.sleep(1)
     print('Матч стартанул')
-
-    # for i in range(1, 11):
-    #     x, y, status = window_coords.get_coordinates(str(i))
-    #     WindowController.changeFPS(x, y)
 
     afk_time = time.time()
 
@@ -326,6 +329,7 @@ def play_game(server):
     while True:
         ct_score = PlayerStatisticsTracker.get_score_ct(server)
         t_score = PlayerStatisticsTracker.get_score_t(server)
+        tracker.get_game_info(server)
         if (ct_score + t_score) == 12:
             print('Смена сторон')
             if ct:
@@ -340,11 +344,13 @@ def play_game(server):
             for i in range(1, 6):
                 x, y, status = window_coords.get_coordinates(str(i))
                 if WindowController.ct_run(x, y, server):
+                    tracker.get_game_info(server)
                     WindowController.reset_gkey_cancelled()
                     print('Ждем начало нового раунда...')
                     while server.get_info("round", "phase") != "live":
                         ct_score = PlayerStatisticsTracker.get_score_ct(server)
                         t_score = PlayerStatisticsTracker.get_score_t(server)
+                        tracker.get_game_info(server)
                         if (ct_score + t_score) == 12:
                             print('Смена сторон')
                             if ct:
@@ -382,6 +388,7 @@ def play_game(server):
                         start_time = time.time()
                         print("Ждем 2 сек на обновление статы")
                         while time.time() - start_time < 2:
+                            tracker.get_game_info(server)
                             data = server.get_info("player")
                             steamid = data['steamid']
                             kills = data['match_stats']['kills']
@@ -398,6 +405,7 @@ def play_game(server):
                         WindowController.reset_gkey_cancelled()
                         print('Ждем начало нового раунда...')
                         while server.get_info("round", "phase") != "live":
+                            tracker.get_game_info(server)
                             ct_score = PlayerStatisticsTracker.get_score_ct(server)
                             t_score = PlayerStatisticsTracker.get_score_t(server)
                             if (ct_score + t_score) == 12:
@@ -411,6 +419,7 @@ def play_game(server):
                             if time.time() - afk_time > 90:
                                 print('Боты стоят более 1.5 минут, выполняем зарядку')
                                 for i in range(6, 11):
+                                    tracker.get_game_info(server)
                                     x, y, status = window_coords.get_coordinates(str(i))
                                     WindowController.afk(x, y)
                                     afk_time = time.time()
@@ -420,6 +429,7 @@ def play_game(server):
         elif not ct:
             t_run = False
             for i in range(6, 11):
+                tracker.get_game_info(server)
                 x, y, status = window_coords.get_coordinates(str(i))
                 if WindowController.ct_run(x, y, server):
                     ct_score = PlayerStatisticsTracker.get_score_ct(server)
@@ -435,9 +445,11 @@ def play_game(server):
                     WindowController.reset_gkey_cancelled()
                     print('Ждем начало нового раунда...')
                     while server.get_info("round", "phase") != "live":
+                        tracker.get_game_info(server)
                         if time.time() - afk_time > 90:
                             print('Боты стоят более 1.5 минут, выполняем зарядку')
                             for i in range(1, 6):
+                                tracker.get_game_info(server)
                                 x, y, status = window_coords.get_coordinates(str(i))
                                 WindowController.afk(x, y)
                                 afk_time = time.time()
@@ -450,6 +462,7 @@ def play_game(server):
             if time.time() - afk_time > 90:
                 print('Боты стоят более 1.5 минут, выполняем зарядку')
                 for i in range(1, 6):
+                    tracker.get_game_info(server)
                     x, y, status = window_coords.get_coordinates(str(i))
                     WindowController.afk(x, y)
                     afk_time = time.time()
@@ -458,16 +471,20 @@ def play_game(server):
             kill = False
             if t_run:
                 while not kill:
+                    tracker.get_game_info(server)
                     x, y, window_id = game_logic.take_window_without_statistic(t_id, 5, window_coords)
                     t_id = window_id
                     if WindowController.t_run(x, y, server):
+                        tracker.get_game_info(server)
                         start_time = time.time()
                         print("Ждем 2 сек на обновление статы")
                         while time.time() - start_time < 2:
+                            tracker.get_game_info(server)
                             data = server.get_info("player")
                             steamid = data['steamid']
                             kills = data['match_stats']['kills']
                             if tracker.update_player_stats(steamid, kills):
+                                tracker.get_game_info(server)
                                 window_coords.update_status(str(window_id), True)
                                 print(f'Бот с идентификатором {window_id} сделал киллы, помечаю его...')
                                 kill = True
@@ -480,6 +497,7 @@ def play_game(server):
                         WindowController.reset_gkey_cancelled()
                         print('Ждем начало нового раунда...')
                         while server.get_info("round", "phase") != "live":
+                            tracker.get_game_info(server)
                             ct_score = PlayerStatisticsTracker.get_score_ct(server)
                             t_score = PlayerStatisticsTracker.get_score_t(server)
                             if (ct_score + t_score) == 12:
