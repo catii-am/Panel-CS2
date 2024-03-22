@@ -5,6 +5,14 @@ import win32api
 import win32con
 import win32gui
 
+import sys
+import os
+
+
+if hasattr(sys, '_MEIPASS'):
+    temp_dir = sys._MEIPASS
+else:
+    temp_dir = os.path.abspath(".")
 
 class WindowCoordinates:
     def __init__(self):
@@ -93,7 +101,7 @@ class PlayerStatisticsTracker:
         ct_score = server.get_info("map", "team_ct", "score")
         t_score = server.get_info("map", "team_t", "score")
         round_phase = server.get_info("round", "phase")
-        with open('_internal/static/sys/game_state.txt', 'w') as file:
+        with open('sys/game_state.txt', 'w') as file:
             file.write(f'Terrorist {t_score}:{ct_score} Counter-Terrorist\nround phase: {round_phase}')
             file.close()
 
@@ -240,7 +248,9 @@ class WindowController:
         """
         window_handle = WindowController.get_window_at_pos(x, y)
         WindowController.gkey_non_phase(window_handle, "w", 0.1)
-        WindowController.gkey_non_phase(window_handle, "z", 2)
+        WindowController.gkey_non_phase(window_handle, "z", 1.5)
+        time.sleep(0.1)
+        WindowController.gkey_non_phase(window_handle, "z", 1.5)
 
     @staticmethod
     def reset_gkey_cancelled():

@@ -7,7 +7,34 @@ from tkinter import messagebox
 from logic import steam_login, tile_windows, play_game, make_lobby, accept_game
 from gsi import server
 import threading
+from tkinter import filedialog
 
+import sys
+import os
+
+if hasattr(sys, '_MEIPASS'):
+    temp_dir = sys._MEIPASS
+else:
+    temp_dir = os.path.abspath(".")
+
+def extract_values_from_file(file_path):
+    with open(file_path, 'r') as file:
+        content = file.read()
+        shared_secret_start = content.find('"shared_secret"') + len('"shared_secret":"')
+        shared_secret_end = content.find('"', shared_secret_start + 1)
+        shared_secret = content[shared_secret_start:shared_secret_end]
+
+        username_start = content.rfind('"account_name":"') + len('"account_name":"')
+        username_end = content.find('"', username_start + 1)
+        username = content[username_start:username_end]
+
+    return shared_secret, username
+
+def username_exists_in_accounts(username, accounts_data):
+    for line in accounts_data:
+        if username in line:
+            return True
+    return False
 
 def make_list_from_file(file):
     with open(file, 'r') as f:
@@ -47,12 +74,12 @@ class Application(tk.Tk):
 
         # Создание кнопок навигации
         nav_buttons = [
-            ("DashBoard", "_internal/static/icon/dashboard.png", self.show_dashboard),
-            ("Accounts", "_internal/static/icon/accounts.png", self.show_accounts),
-            ("Settings", "_internal/static/icon/settings.png", self.show_settings),
-            ("Info", "_internal/static/icon/info.png", self.show_info),
-            ("Notification", "_internal/static/icon/notification.png", self.show_notifications),
-            ("Profile", "_internal/static/icon/account.png", self.show_profile)
+            ("DashBoard", os.path.join(temp_dir, 'static/icon/dashboard.png'), self.show_dashboard),
+            ("Accounts", os.path.join(temp_dir, "static/icon/accounts.png"), self.show_accounts),
+            ("Settings", os.path.join(temp_dir, "static/icon/settings.png"), self.show_settings),
+            ("Info", os.path.join(temp_dir, "static/icon/info.png"), self.show_info),
+            ("Notification", os.path.join(temp_dir, "static/icon/notification.png"), self.show_notifications),
+            ("Profile", os.path.join(temp_dir, "static/icon/account.png"), self.show_profile)
         ]
 
         for index, (text, icon, command) in enumerate(nav_buttons):
@@ -206,7 +233,7 @@ class AccountsWindow(tk.Toplevel):
         thread.start()
     def load_accounts(self):
         # Загрузка аккаунтов из файла accounts.txt
-        accounts = make_list_from_file("_internal/static/sys/accounts.txt")
+        accounts = make_list_from_file("sys/accounts.txt")
 
         # Создаем чекбоксы для выбора каждых 10 аккаунтов
         for i in range(0, len(accounts), 10):
@@ -230,14 +257,136 @@ class AccountsWindow(tk.Toplevel):
         self.accounts_inner_frame.grid_columnconfigure(1, weight=1)
 
     def add_account(self):
-        print('add account')
+        users = []
+
+        # Открыть диалоговое окно для выбора файлов
+        file_paths = filedialog.askopenfilenames(title="Выберите файлы аккаунтов",
+                                                 filetypes=[("Text Files", "*.maFile")])
+        accounts_file = "sys/accounts.txt"
+
+        # Проверить, что были выбраны файлы
+        if file_paths:
+            # Открыть файлы и добавить информацию в accounts.txt
+            with open(accounts_file, 'r') as file:
+                accounts_data = file.readlines()
+
+            for file_path in file_paths:
+                shared_secret, username = extract_values_from_file(file_path)
+                if username:
+                    if not username_exists_in_accounts(username, accounts_data):
+                        password = None
+                        users.append([username, password, shared_secret])
+
+            # Проверяем, не пустой ли кортеж users
+            if not users:
+                messagebox.showinfo("Информация", "Не найдены новые аккаунты.")
+            else:
+                add_account_window = AddAccountWindow(self, users)
+                self.wait_window(add_account_window)
+
+                if add_account_window.window_closed:
+                    messagebox.showinfo("Информация", "Добавление аккаунтов отменено")
+                    return False
+
+                else:
+                    with open("sys/accounts.txt", 'a') as file:
+                        for user_info in users:
+                            username, password, shared_secret = user_info
+                            file.write(f"{username}:{password}:{shared_secret}\n")
+        else:
+            messagebox.showinfo("Информация", "Не выбраны файлы аккаунтов.")
+
+
+class AddAccountWindow(tk.Toplevel):
+    def __init__(self, parent, users):
+        super().__init__(parent)
+        self.window_closed = None
+        self.users = users
+        self.password_entries = []  # Создаем список для хранения объектов Entry
+        self.title("Добавить аккаунты")
+        self.geometry("500x350")
+        self.setup_ui()
+
+    def setup_ui(self):
+        # Создаем фрейм для размещения Entry и меток
+        entry_frame = tk.Frame(self)
+        entry_frame.pack(side="left", fill="both", expand=True)
+
+        # Создаем Canvas для добавления прокручиваемой области
+        self.canvas = tk.Canvas(entry_frame, borderwidth=0)
+        self.frame = tk.Frame(self.canvas)
+        self.vsb = tk.Scrollbar(entry_frame, orient="vertical", command=self.canvas.yview)
+        self.canvas.configure(yscrollcommand=self.vsb.set)
+
+        # Упаковываем виджеты в окне
+        self.vsb.pack(side="right", fill="y")
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.canvas.create_window((4, 4), window=self.frame, anchor="nw")
+
+        # Привязываем событие прокрутки колеса мыши
+        self.frame.bind("<Configure>", self.on_frame_configure)
+        self.canvas.bind_all("<MouseWheel>", self.on_mousewheel)
+
+        # Создаем и размещаем Entry для каждого пользователя
+        for user_info in self.users:
+            username = user_info[0]
+            frame = tk.Frame(self.frame)
+            frame.pack(fill="x", padx=10, pady=5)
+            label = tk.Label(frame, text=username)
+            label.pack(side="left", padx=5)
+            entry = tk.Entry(frame)
+            entry.pack(side="right", padx=5)
+            # Добавляем объект Entry в список password_entries
+            self.password_entries.append(entry)
+
+        # Обновляем размещение фрейма с прокручиваемым содержимым
+        self.update_frame()
+
+        # Создаем фрейм для кнопки "Сохранить"
+        button_frame = tk.Frame(self)
+        button_frame.pack(side="bottom", fill="x")
+
+        # Создаем и размещаем кнопку "Сохранить" во внутреннем фрейме
+        save_button = tk.Button(button_frame, text="Сохранить", command=self.save_passwords)
+        save_button.pack(side="right", pady=10, padx=10)
+
+        # Переопределяем обработчик закрытия окна
+        self.protocol("WM_DELETE_WINDOW", self.cancel)
+
+    def on_frame_configure(self, event):
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    def on_mousewheel(self, event):
+        self.canvas.yview_scroll(-1 * (event.delta // 120), "units")
+
+    def update_frame(self):
+        # Устанавливаем высоту фрейма с содержимым равной высоте содержимого
+        self.frame.update_idletasks()
+        self.canvas.config(scrollregion=self.canvas.bbox("all"))
+
+    def save_passwords(self):
+        for i, password_entry in enumerate(self.password_entries):
+            password = password_entry.get()
+            # Получаем соответствующий пользователю объект Entry
+            user_info = self.users[i]
+            if password:
+                user_info[1] = password
+            else:
+                messagebox.showerror("Ошибка", f"Не введен пароль для пользователя {user_info[0]}")
+                return
+
+        self.destroy()
+
+    def cancel(self):
+        self.window_closed = True
+        self.destroy()
 
 
 class SettingsWindow(tk.Toplevel):
     def __init__(self, parent):
         super().__init__(parent)
 
-        config_file = "_internal/static/sys/config.cfg"
+        config_file = "sys/config.cfg"
         with open(config_file, "r") as f:
             for line in f:
                 # Разделение строки по первому символу ":"
@@ -300,9 +449,10 @@ class SettingsWindow(tk.Toplevel):
     def save_settings(self):
         steam_path = self.steam_path_entry.get()
         launch_parameters = self.launch_parameters_entry.get()
-        with open("config.cfg", "w") as file:
+        config_file = "sys/config.cfg"
+        with open(config_file, "w") as file:
             file.write(f'SteamPath:{steam_path}\nArguments:{launch_parameters}')
-        # Ваш код для сохранения настроек
+        # Код для сохранения настроек
 
 
 class DashboardWindow(tk.Toplevel):
@@ -339,7 +489,7 @@ class DashboardWindow(tk.Toplevel):
         self.update_data()
 
     def update_data(self):
-        game_info = make_list_from_file('_internal/static/sys/game_state.txt')
+        game_info = make_list_from_file('sys/game_state.txt')
         match_score = game_info[0]
         current_state = game_info[1]
 

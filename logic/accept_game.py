@@ -33,7 +33,6 @@ class Logic:
 def accept_game():
     logic = Logic()
     clear = lambda: os.system('cls')
-    input('Как только игра найдется нажми Enter')
     for i in range(1, 11):
         if i == 1:
             x, y = 0, 0

@@ -2,7 +2,6 @@ import subprocess
 import win32gui
 from pywinauto.application import Application
 from pywinauto.keyboard import send_keys
-import os
 import time
 import hmac
 import struct
@@ -10,6 +9,13 @@ import base64
 import requests
 from hashlib import sha1
 
+import sys
+import os
+
+if hasattr(sys, '_MEIPASS'):
+    temp_dir = sys._MEIPASS
+else:
+    temp_dir = os.path.abspath(".")
 
 def make_list_from_file(file):
     with open(file, 'r') as f:
@@ -140,7 +146,7 @@ class Steam:
 
 
 def steam_login(acc_quest):
-    config_file = "_internal/static/sys/config.cfg"
+    config_file = "sys/config.cfg"
     steam_path = None
     arguments = []
 
@@ -158,7 +164,7 @@ def steam_login(acc_quest):
 
     steam = Steam()
 
-    acc_list = make_list_from_file("_internal/static/sys/accounts.txt")
+    acc_list = make_list_from_file("sys/accounts.txt")
     first_number = 1
     second_number = 11
 
