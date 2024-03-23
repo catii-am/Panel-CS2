@@ -8,6 +8,7 @@ from logic import steam_login, tile_windows, play_game, make_lobby, accept_game
 from gsi import server
 import threading
 from tkinter import filedialog
+import json
 
 import sys
 import os
@@ -16,6 +17,7 @@ if hasattr(sys, '_MEIPASS'):
     temp_dir = sys._MEIPASS
 else:
     temp_dir = os.path.abspath(".")
+
 
 def extract_values_from_file(file_path):
     with open(file_path, 'r') as file:
@@ -30,11 +32,13 @@ def extract_values_from_file(file_path):
 
     return shared_secret, username
 
+
 def username_exists_in_accounts(username, accounts_data):
     for line in accounts_data:
         if username in line:
             return True
     return False
+
 
 def make_list_from_file(file):
     with open(file, 'r') as f:
@@ -231,6 +235,7 @@ class AccountsWindow(tk.Toplevel):
     def make_lobby(self):
         thread = threading.Thread(target=make_lobby.make_lobby)
         thread.start()
+
     def load_accounts(self):
         # Загрузка аккаунтов из файла accounts.txt
         accounts = make_list_from_file("sys/accounts.txt")
@@ -485,6 +490,10 @@ class DashboardWindow(tk.Toplevel):
         self.current_state_label = tk.Label(self, text="")
         self.current_state_label.pack()
 
+        # Кнопка "Просмотр всех игр"
+        self.view_all_games_button = ttk.Button(self, text="Просмотр всех игр", command=self.view_all_games)
+        self.view_all_games_button.pack(pady=10)
+
         # Периодическое обновление данных
         self.update_data()
 
@@ -501,6 +510,53 @@ class DashboardWindow(tk.Toplevel):
 
         # Повторно вызываем этот метод через 1000 миллисекунд (1 секунда)
         self.after(1000, self.update_data)
+
+    def view_all_games(self):
+        all_games_window = AllGamesWindow(self)
+        all_games_window.grab_set()
+
+class AllGamesWindow(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.title("Все игры")
+        self.geometry("400x400")
+
+        # Создаем вертикальный скроллбар
+        scrollbar = tk.Scrollbar(self)
+        scrollbar.pack(side="right", fill="y")
+
+        # Создаем текстовое поле для отображения всех игр с привязкой скроллбара
+        self.games_text = tk.Text(self, wrap="word", yscrollcommand=scrollbar.set)
+        self.games_text.pack(expand=True, fill="both")
+
+        # Привязываем скроллбар к текстовому полю
+        scrollbar.config(command=self.games_text.yview)
+
+        # Загружаем игры из файла и отображаем их
+        self.load_and_display_games()
+
+    def load_and_display_games(self):
+        try:
+            with open("sys/games.json", "r") as file:
+                games_data = json.load(file)
+
+            # Очищаем текстовое поле перед отображением новых данных
+            self.games_text.delete(1.0, "end")
+
+            for game in games_data:
+                self.games_text.insert("end", f"Игра №{game['game_id']}\n")
+                self.games_text.insert("end", f"{game['data']} {game['time']}\n")
+                self.games_text.insert("end", f"Terrorist {game['score_t']}:{game['score_ct']} Counter-Terrorist\n")
+
+                for i in range(5):
+                    self.games_text.insert("end", f"{game['players'][i]}\t\t{game['players'][i+5]}\n")
+
+                self.games_text.insert("end", "\n\n")
+
+        except FileNotFoundError:
+            messagebox.showerror("Ошибка", "Файл с играми не найден.")
+
 
 if __name__ == "__main__":
     try:
