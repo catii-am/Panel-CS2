@@ -108,7 +108,7 @@ class Steam:
 
     def start_steam(self, steam_path, arguments):
         program_path = rf'{steam_path}'
-        arguments = ['-vgui', '-applaunch', '730', '-novid', '-nosound', '-console', '-nojoy']
+        arguments = ['-vgui', '-applaunch', '730', '-novid', '-nosound', '-console', '-nojoy', '+exec autoexec.cfg']
 
         subprocess.Popen([program_path] + arguments)
 

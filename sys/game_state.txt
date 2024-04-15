@@ -1,2 +1,2 @@
-Terrorist None:None Counter-Terrorist
-round phase: Game is not started
+Terrorist 12:10 Counter-Terrorist
+round phase: over

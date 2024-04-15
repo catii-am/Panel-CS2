@@ -69,7 +69,7 @@ class Application(tk.Tk):
         self.header_frame.pack(side="top", fill="x")
 
         # Название приложения
-        self.app_name_label = tk.Label(self.header_frame, text="Catti Farm", font=("Arial", 16))
+        self.app_name_label = tk.Label(self.header_frame, text="Catii Farm", font=("Arial", 16))
         self.app_name_label.grid(row=0, column=1, padx=10, pady=10)
 
         # Создание фрейма для кнопок навигации
@@ -124,8 +124,8 @@ class Application(tk.Tk):
         settings_window.grab_set()
 
     def show_info(self):
-        # Здесь будет код для отображения экрана Info
-        print("Info screen")
+        info_window = InfoWindow(self)
+        info_window.grab_set()
 
     def show_notifications(self):
         # Здесь будет код для отображения экрана Notification
@@ -515,6 +515,7 @@ class DashboardWindow(tk.Toplevel):
         all_games_window = AllGamesWindow(self)
         all_games_window.grab_set()
 
+
 class AllGamesWindow(tk.Toplevel):
     def __init__(self, parent):
         super().__init__(parent)
@@ -558,6 +559,28 @@ class AllGamesWindow(tk.Toplevel):
             messagebox.showerror("Ошибка", "Файл с играми не найден.")
 
 
+class InfoWindow(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.title("Info")
+        self.geometry("600x300")
+
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        window_width = 600
+        window_height = 300
+
+        x = (screen_width - window_width) // 2
+        y = screen_height - window_height - 48 - 104
+
+        self.geometry(f"{window_width}x{window_height}+{x}+{y}")
+
+        # Текст "Catii Panel"
+        self.game_score_label = tk.Label(self, text="Catii Panel", font=("Arial", 16))
+        self.game_score_label.pack(pady=10)
+
 if __name__ == "__main__":
     try:
         app = Application()
@@ -565,3 +588,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(30)
+
+
+# bind c "yaw +3409 1 1";bind z +duck;sensitivity 1.2;bind v +attack2;bind f "toggle fps_max 10 30";bind q disconnect;bind g "fps_max 60";fps_max 60;map_enable_background_maps 1; map_enable_background_maps 0
