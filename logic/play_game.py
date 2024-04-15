@@ -50,6 +50,19 @@ class WindowCoordinates:
         """
         return self.coordinates
 
+    def get_window_rect(self, hwnd):
+        rect = win32gui.GetWindowRect(hwnd)
+        x, y, width, height = rect
+        return x, y
+
+    def find_window_by_title(self, title):
+        hwnd = win32gui.FindWindow(None, title)
+        if hwnd != 0:
+            print("Окно с заголовком '{}' найдено.".format(title))
+            return hwnd
+        else:
+            print("Окно с заголовком '{}' не найдено.".format(title))
+
 
 class PlayerStatisticsTracker:
     def __init__(self):
@@ -291,7 +304,7 @@ class GameLogic:
         return x, y, window_id
 
 
-def play_game(server, answer):
+def play_game(server):
     play_time = time.time()
     team_changed = False
     tracker = PlayerStatisticsTracker()
@@ -311,13 +324,6 @@ def play_game(server, answer):
     window_coords.add_window("9", 1120, 398)
     window_coords.add_window("10", 1440, 398)
 
-    """Выбор положения кт. (в будущем пофиксить)"""
-
-    if answer:
-        ct = True
-        print('кт сверху')
-    else:
-        ct = False
 
     """Старт GSI сервера."""
 
@@ -333,8 +339,8 @@ def play_game(server, answer):
     afk_time = time.time()
 
     start_time = time.time()
-    print("ждем 2 сек на добавление ботов в панель")
-    while time.time() - start_time < 2:
+    print("ждем 5 сек на добавление ботов в панель")
+    while time.time() - start_time < 5:
         data = server.get_info("player")
         steamid = data['steamid']
         kills = data['match_stats']['kills']
@@ -344,8 +350,27 @@ def play_game(server, answer):
     t_score = PlayerStatisticsTracker.get_score_t(server)
     tracker.get_game_info(server)
 
+    data = server.get_info("player")
+    steamID = data["steamid"]
+    team = data["team"]
+
+    x, y = window_coords.get_window_rect(window_coords.find_window_by_title(steamID))
+
+    if y == 0:
+        up = True
+    else:
+        up = False
+
+    if (up and team == "CT") or (not up and team == "T"):
+        ct = True
+        print('кт сверху')
+    else:
+        ct = False
+
     print('Ждем пока закончатся 2 раунда')
     while (ct_score + t_score) < 2:
+        time.sleep(1)
+        tracker.get_game_info(server)
         ct_score = PlayerStatisticsTracker.get_score_ct(server)
         t_score = PlayerStatisticsTracker.get_score_t(server)
         if time.time() - afk_time > 90:
@@ -555,6 +580,8 @@ def play_game(server, answer):
 
     print('Ждем пока закончится игра')
     while (ct_score + t_score) != 24:
+        time.sleep(1)
+        tracker.get_game_info(server)
         ct_score = PlayerStatisticsTracker.get_score_ct(server)
         t_score = PlayerStatisticsTracker.get_score_t(server)
         if time.time() - afk_time > 90:

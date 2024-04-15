@@ -8,7 +8,7 @@ import struct
 import base64
 import requests
 from hashlib import sha1
-
+import json
 import sys
 import os
 
@@ -119,8 +119,11 @@ class Steam:
             if hwnd != 0:
                 return hwnd
             if time.time() > end_time:
-                raise TimeoutError(f"Window with title '{title}' not found within {timeout} seconds.")
+                return False
             time.sleep(0.5)
+
+    def rename_window_text(self, hwnd, title):
+        win32gui.SetWindowText(hwnd, title)
 
     def bring_window_to_front(self, hwnd):
         app = Application().connect(handle=hwnd)
@@ -164,7 +167,11 @@ def steam_login(acc_quest):
 
     steam = Steam()
 
-    acc_list = make_list_from_file("sys/accounts.txt")
+    with open("sys/accounts.json", 'r') as file:
+        accounts_data = json.load(file)
+
+    acc_list = [account for account in accounts_data]
+
     first_number = 1
     second_number = 11
 
@@ -178,15 +185,19 @@ def steam_login(acc_quest):
         last_hwnd = None
         for i in range(first_number, second_number):
             account = acc_list[i - 1]
-            username = account.split(":")[0]
-            password = account.split(":")[1]
-            SGAKey = account.split(":")[2]
+            username = account["username"]
+            password = account["password"]
+            SGAKey = account["shared_secret"]
+            steamID = account["steamID"]
             print(f'Вход в аккаунт {username}')
             steam.start_steam(steam_path, arguments)
 
             while True:
                 hwnd = steam.wait_for_window("Войти в Steam", timeout=120)
-                if last_hwnd != hwnd:
+                if not hwnd:
+                    steam.start_steam(steam_path, arguments)
+                    hwnd = last_hwnd
+                elif last_hwnd != hwnd:
                     time.sleep(2)
                     steam.bring_window_to_front(hwnd)
                     steam.send_username(username)
@@ -197,7 +208,11 @@ def steam_login(acc_quest):
                     SGC = getGuardCode(SGAKey)
                     steam.send_SGC(SGC)
                     last_hwnd = hwnd
-                    time.sleep(10)
+                    time.sleep(30)
+                    cs2hwnd = steam.wait_for_window("Counter-Strike 2", timeout=240)
+                    if not cs2hwnd:
+                        input('Какие то траблы с запуском кс.\nЗапусти в ручную и нажми Enter')
+                    steam.rename_window_text(cs2hwnd, steamID)
                     break
                 else:
                     time.sleep(1)

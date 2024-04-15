@@ -4,7 +4,9 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 from tkinter import messagebox
-from logic import steam_login, tile_windows, play_game, make_lobby, accept_game
+
+import logic.steam_api
+from logic import steam_login, tile_windows, play_game, make_lobby, accept_game, steam_api
 from gsi import server
 import threading
 from tkinter import filedialog
@@ -30,7 +32,10 @@ def extract_values_from_file(file_path):
         username_end = content.find('"', username_start + 1)
         username = content[username_start:username_end]
 
-    return shared_secret, username
+        steamID_start = content.rfind('"SteamID":') + len('"SteamID":')
+        steamID_end = content.find('"', username_start + 1)
+        steamID = content[steamID_start:steamID_end]
+    return shared_secret, username, steamID
 
 
 def username_exists_in_accounts(username, accounts_data):
@@ -143,12 +148,12 @@ class AccountsWindow(tk.Toplevel):
         self.selected_index = None
 
         self.title("Accounts")
-        self.geometry("600x400")
+        self.geometry("650x400")
 
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
 
-        window_width = 600
+        window_width = 650
         window_height = 400
 
         x = (screen_width - window_width) // 2
@@ -205,14 +210,45 @@ class AccountsWindow(tk.Toplevel):
         gather_lobby_button = ttk.Button(button_block, text="Gather lobby", command=self.make_lobby)
         gather_lobby_button.grid(row=0, column=4, padx=5)
 
+        update_data_button = ttk.Button(button_block, text="Update data", command=self.update_data)
+        update_data_button.grid(row=0, column=5, padx=5)
+
     def get_checkbox_index(self):
         # Определяем индекс чекбокса
         index = (self.selected_index // 10) + 1
         return index
 
+    def update_data(self):
+        with open("sys/accounts.json", 'r') as file:
+            accounts_data = json.load(file)
+
+        total_accounts = len(accounts_data)
+
+        # Создаем всплывающее окно прогресса
+        progress_window = ProgressDialog(self, total_accounts)
+        progress_window.grab_set()
+
+        for idx, account in enumerate(accounts_data, 1):
+            progress_window.update_progress(idx)
+            time.sleep(2)
+
+            username = account["username"]
+            password = account['password']
+            shared_secret = account['shared_secret']
+
+            rank, exp, steamID = logic.steam_api.update_data(username, password, shared_secret)
+
+            account["steamID"] = steamID
+            account["rank"] = rank
+            account["exp"] = exp
+
+        with open("sys/accounts.json", 'w') as file:
+            json.dump(accounts_data, file, indent=4)
+
+        progress_window.destroy()
+
     def start_game(self):
-        answer = messagebox.askyesno("Confirmation", "КТ сверху?")
-        thread = threading.Thread(target=play_game.play_game, args=(server, answer,))
+        thread = threading.Thread(target=play_game.play_game, args=(server,))
         thread.start()
 
     def accept_game(self):
@@ -237,13 +273,14 @@ class AccountsWindow(tk.Toplevel):
         thread.start()
 
     def load_accounts(self):
-        # Загрузка аккаунтов из файла accounts.txt
-        accounts = make_list_from_file("sys/accounts.txt")
+        # Загрузка аккаунтов из файла accounts.json
+        with open("sys/accounts.json", 'r') as file:
+            accounts_data = json.load(file)
 
         # Создаем чекбоксы для выбора каждых 10 аккаунтов
-        for i in range(0, len(accounts), 10):
+        for i in range(0, len(accounts_data), 10):
             start_index = i
-            end_index = min(i + 9, len(accounts) - 1)
+            end_index = min(i + 9, len(accounts_data) - 1)
 
             # Создаем промежуточный фрейм для каждых 10 аккаунтов
             intermediate_frame = tk.Frame(self.accounts_inner_frame)
@@ -254,8 +291,18 @@ class AccountsWindow(tk.Toplevel):
             select_label.grid(row=0, column=0, sticky="w", padx=10, pady=5)
 
             for j in range(start_index, end_index + 1):
-                username = accounts[j].split(":")[0]
-                account_label = tk.Label(intermediate_frame, text=username)
+                account = accounts_data[j]  # Получаем словарь аккаунта
+
+                username = account["username"]
+                rank = account["rank"]
+                exp = account["exp"]
+                farmed = account["farmed"]
+
+                account_label_text = f"{username}\nRank {rank} - {exp}/5000"
+                if farmed:
+                    account_label_text += " (Farmed)"
+
+                account_label = tk.Label(intermediate_frame, text=account_label_text)
                 account_label.grid(row=j - start_index + 1, column=1, sticky="w", padx=20, pady=2)
 
         # Устанавливаем размер колонок для выравнивания
@@ -267,22 +314,31 @@ class AccountsWindow(tk.Toplevel):
         # Открыть диалоговое окно для выбора файлов
         file_paths = filedialog.askopenfilenames(title="Выберите файлы аккаунтов",
                                                  filetypes=[("Text Files", "*.maFile")])
-        accounts_file = "sys/accounts.txt"
+        accounts_file = "sys/accounts.json"
 
         # Проверить, что были выбраны файлы
         if file_paths:
-            # Открыть файлы и добавить информацию в accounts.txt
+            # Открыть файлы и добавить информацию в accounts.json
             with open(accounts_file, 'r') as file:
-                accounts_data = file.readlines()
+                accounts_data = json.load(file)
 
             for file_path in file_paths:
-                shared_secret, username = extract_values_from_file(file_path)
+                shared_secret, username, steamID = extract_values_from_file(file_path)
                 if username:
                     if not username_exists_in_accounts(username, accounts_data):
-                        password = None
-                        users.append([username, password, shared_secret])
+                        # Создаем словарь для нового аккаунта
+                        account = {
+                            "username": username,
+                            "password": None,  # Здесь вы должны получить пароль, но для примера я оставлю None
+                            "shared_secret": shared_secret,
+                            "steamID": steamID,  # Здесь вы должны получить steamID
+                            "rank": 1,  # Здесь можете задать начальные значения ранга и опыта
+                            "exp": 0,
+                            "farmed": False
+                        }
+                        users.append(account)
 
-            # Проверяем, не пустой ли кортеж users
+            # Проверяем, не пустой ли список users
             if not users:
                 messagebox.showinfo("Информация", "Не найдены новые аккаунты.")
             else:
@@ -294,10 +350,11 @@ class AccountsWindow(tk.Toplevel):
                     return False
 
                 else:
-                    with open("sys/accounts.txt", 'a') as file:
-                        for user_info in users:
-                            username, password, shared_secret = user_info
-                            file.write(f"{username}:{password}:{shared_secret}\n")
+                    with open(accounts_file, 'w') as file:
+                        # Добавляем новые аккаунты к существующим данным
+                        accounts_data.append(users)
+                        # Записываем все данные в JSON файл
+                        json.dump(accounts_data, file, indent=4)
         else:
             messagebox.showinfo("Информация", "Не выбраны файлы аккаунтов.")
 
@@ -334,7 +391,7 @@ class AddAccountWindow(tk.Toplevel):
 
         # Создаем и размещаем Entry для каждого пользователя
         for user_info in self.users:
-            username = user_info[0]
+            username = user_info["username"]  # Используем ключ "username" вместо индекса 0
             frame = tk.Frame(self.frame)
             frame.pack(fill="x", padx=10, pady=5)
             label = tk.Label(frame, text=username)
@@ -375,9 +432,9 @@ class AddAccountWindow(tk.Toplevel):
             # Получаем соответствующий пользователю объект Entry
             user_info = self.users[i]
             if password:
-                user_info[1] = password
+                user_info["password"] = password  # Обновляем пароль в словаре аккаунта
             else:
-                messagebox.showerror("Ошибка", f"Не введен пароль для пользователя {user_info[0]}")
+                messagebox.showerror("Ошибка", f"Не введен пароль для пользователя {user_info['username']}")
                 return
 
         self.destroy()
@@ -498,18 +555,21 @@ class DashboardWindow(tk.Toplevel):
         self.update_data()
 
     def update_data(self):
-        game_info = make_list_from_file('sys/game_state.txt')
-        match_score = game_info[0]
-        current_state = game_info[1]
+        try:
+            game_info = make_list_from_file('sys/game_state.txt')
+            match_score = game_info[0]
+            current_state = game_info[1]
 
-        # Обновляем счет матча из файла game_state.txt
-        self.match_score_label.config(text=match_score)
+            # Обновляем счет матча из файла game_state.txt
+            self.match_score_label.config(text=match_score)
 
-        # Обновляем текущее состояние матча из файла game_state.txt
-        self.current_state_label.config(text=current_state)
+            # Обновляем текущее состояние матча из файла game_state.txt
+            self.current_state_label.config(text=current_state)
 
-        # Повторно вызываем этот метод через 1000 миллисекунд (1 секунда)
-        self.after(1000, self.update_data)
+            # Повторно вызываем этот метод через 1000 миллисекунд (1 секунда)
+            self.after(1000, self.update_data)
+        except:
+            pass
 
     def view_all_games(self):
         all_games_window = AllGamesWindow(self)
@@ -580,6 +640,28 @@ class InfoWindow(tk.Toplevel):
         # Текст "Catii Panel"
         self.game_score_label = tk.Label(self, text="Catii Panel", font=("Arial", 16))
         self.game_score_label.pack(pady=10)
+
+
+class ProgressDialog(tk.Toplevel):
+    def __init__(self, parent, total):
+        super().__init__(parent)
+        self.title("Progress")
+        self.geometry("300x100")
+
+        self.progress = ttk.Progressbar(self, orient="horizontal", length=200, mode="determinate")
+        self.progress.pack(pady=20)
+
+        self.total = total
+        self.current_progress = 0
+
+        self.update_progress(0)
+
+    def update_progress(self, value):
+        self.current_progress = value
+        self.progress["value"] = value
+
+        if value == self.total:
+            self.destroy()
 
 if __name__ == "__main__":
     try:
