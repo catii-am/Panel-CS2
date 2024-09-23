@@ -32,6 +32,7 @@ class Logic:
         WindowController.mouse_click(x+315, y+120, hwnd)
         time.sleep(0.7)
         WindowController.mouse_click(x+320, y+32, hwnd)
+        time.sleep(1)
 
     @staticmethod
     def open_code(x, y):

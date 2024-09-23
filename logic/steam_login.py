@@ -2,14 +2,20 @@ import subprocess
 import win32gui
 from pywinauto.application import Application
 from pywinauto.keyboard import send_keys
-import os
 import time
 import hmac
 import struct
 import base64
 import requests
 from hashlib import sha1
+import json
+import sys
+import os
 
+if hasattr(sys, '_MEIPASS'):
+    temp_dir = sys._MEIPASS
+else:
+    temp_dir = os.path.abspath(".")
 
 def make_list_from_file(file):
     with open(file, 'r') as f:
@@ -102,7 +108,7 @@ class Steam:
 
     def start_steam(self, steam_path, arguments):
         program_path = rf'{steam_path}'
-        arguments = ['-vgui', '-applaunch', '730', '-novid', '-nosound', '-console', '-nojoy']
+        arguments = ['-vgui', '-applaunch', '730', '-novid', '-nosound', '-console', '-nojoy', '+exec autoexec.cfg']
 
         subprocess.Popen([program_path] + arguments)
 
@@ -113,8 +119,11 @@ class Steam:
             if hwnd != 0:
                 return hwnd
             if time.time() > end_time:
-                raise TimeoutError(f"Window with title '{title}' not found within {timeout} seconds.")
+                return False
             time.sleep(0.5)
+
+    def rename_window_text(self, hwnd, title):
+        win32gui.SetWindowText(hwnd, title)
 
     def bring_window_to_front(self, hwnd):
         app = Application().connect(handle=hwnd)
@@ -139,10 +148,8 @@ class Steam:
         send_keys(SGC)
 
 
-def steam_login():
-    tile = False
-    invite = False
-    config_file = "config.cfg"
+def steam_login(acc_quest):
+    config_file = "sys/config.cfg"
     steam_path = None
     arguments = []
 
@@ -159,19 +166,14 @@ def steam_login():
                     arguments = value.strip().split()
 
     steam = Steam()
-    clear = lambda: os.system('cls')
 
-    print('Проверяем наличие новых аккаунтов...')
+    with open("sys/accounts.json", 'r') as file:
+        accounts_data = json.load(file)
 
-    all_accounts, new_account = process_files_in_directory('MaFile')
-    print(f'Всего {all_accounts} аккаунтов, из них новых {new_account}\n')
+    acc_list = [account for account in accounts_data]
 
-    acc_list = make_list_from_file("accounts.txt")
-    acc_quest = int(input('Какую пачку аккаунтов запустить? (1-9999)\nИли 0 если окна уже запущены.\n'))
     first_number = 1
     second_number = 11
-
-    clear()
 
     if acc_quest > 1:
         acc_quest = acc_quest - 1
@@ -183,15 +185,19 @@ def steam_login():
         last_hwnd = None
         for i in range(first_number, second_number):
             account = acc_list[i - 1]
-            username = account.split(":")[0]
-            password = account.split(":")[1]
-            SGAKey = account.split(":")[2]
+            username = account["username"]
+            password = account["password"]
+            SGAKey = account["shared_secret"]
+            steamID = account["steamID"]
             print(f'Вход в аккаунт {username}')
             steam.start_steam(steam_path, arguments)
 
             while True:
                 hwnd = steam.wait_for_window("Войти в Steam", timeout=120)
-                if last_hwnd != hwnd:
+                if not hwnd:
+                    steam.start_steam(steam_path, arguments)
+                    hwnd = last_hwnd
+                elif last_hwnd != hwnd:
                     time.sleep(2)
                     steam.bring_window_to_front(hwnd)
                     steam.send_username(username)
@@ -202,21 +208,11 @@ def steam_login():
                     SGC = getGuardCode(SGAKey)
                     steam.send_SGC(SGC)
                     last_hwnd = hwnd
-                    time.sleep(10)
+                    time.sleep(30)
+                    cs2hwnd = steam.wait_for_window("Counter-Strike 2", timeout=240)
+                    if not cs2hwnd:
+                        input('Какие то траблы с запуском кс.\nЗапусти в ручную и нажми Enter')
+                    steam.rename_window_text(cs2hwnd, steamID)
                     break
                 else:
                     time.sleep(1)
-        clear()
-        if input('Нужно ли раставить окна\n') == 'y':
-            tile = True
-        if input('Нужно ли пригласить акки в лобби?\n') == 'y':
-            invite = True
-        input('После запуска всех окон кс нажми Enter')
-        clear()
-        return tile, invite
-    else:
-        if input('Нужно ли раставить окна\n') == 'y':
-            tile = True
-        if input('Нужно ли пригласить акки в лобби?\n') == 'y':
-            invite = True
-        return tile, invite
